@@ -1,0 +1,67 @@
+plugins {
+  id 'com.github.johnrengelman.shadow' version '7.0.0'
+  id 'java'
+}
+
+repositories {
+  mavenCentral()
+}
+
+shadowJar {
+  archiveBaseName.set("${plugin_name}")
+  archiveVersion.set("${plugin_version}")
+  archiveClassifier.set('')
+
+  dependencies {
+    exclude(dependency("co.elastic.logging:.*"))
+    exclude(dependency("com.carrotsearch:hppc:.*"))
+    exclude(dependency("com.google.guava:.*"))
+    exclude(dependency("com.tdunning:t-digest:.*"))
+    exclude(dependency("com.unboundid:.*"))
+    exclude(dependency("commons-codec:.*"))
+    exclude(dependency("commons-logging:.*"))
+    exclude(dependency("io.netty:.*"))
+    exclude(dependency("net.java.dev.jna:.*"))
+    exclude(dependency("net.sf.jopt-simple:jopt-simple:.*"))
+    exclude(dependency("org.apache.httpcomponents:.*"))
+    exclude(dependency("org.apache.logging.log4j:.*"))
+    exclude(dependency("org.apache.lucene:.*"))
+    exclude(dependency("org.elasticsearch:.*"))
+    exclude(dependency("org.elasticsearch.plugin:.*"))
+    exclude(dependency("org.hdrhistogram:HdrHistogram:.*"))
+    exclude(dependency("org.jruby.jcodings:.*"))
+    exclude(dependency("org.jruby.joni:.*"))
+    exclude(dependency("org.lz4:.*"))
+  }
+}
+
+dependencies {
+  implementation "com.google.code.gson:gson:2.8.7"
+  implementation "org.elasticsearch:elasticsearch:${elastic_version}"
+  implementation "org.elasticsearch.plugin:x-pack-core:${elastic_version}"
+  implementation "org.elasticsearch.plugin:transport-nio-client:7.17.2"
+
+//  testImplementation('com.fasterxml.jackson.core:jackson-databind:2.13.0')
+//  testImplementation("org.elasticsearch.client:elasticsearch-rest-high-level-client:${elastic_version}")
+//  testImplementation('org.apache.logging.log4j:log4j-api:2.17.1')
+//  testImplementation('org.apache.logging.log4j:log4j-core:2.17.1')
+//  testImplementation("org.junit.jupiter:junit-jupiter:5.8.1")
+}
+
+test {
+  dependsOn "cleanTest"
+  useJUnitPlatform()
+}
+
+task zip(type:Zip, dependsOn: shadowJar) {
+  archiveName "${plugin_name}-${plugin_version}.zip"
+  from shadowJar
+  from 'resources/plugin-descriptor.properties'
+  from 'resources/plugin-security.policy'
+}
+
+task push(type: Exec, dependsOn: build) {
+  commandLine "./build.sh", "-n", "${plugin_name}", "-v", "${plugin_version}", "-e", "${elastic_version}"
+}
+
+build.dependsOn zip

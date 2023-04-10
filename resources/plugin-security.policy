@@ -1,0 +1,9 @@
+grant {
+  permission java.util.PropertyPermission "javax.net.ssl.*", "read,write";
+  permission java.util.PropertyPermission "https.*", "read,write";
+  permission java.lang.RuntimePermission "getClassLoader";
+  permission java.lang.RuntimePermission "accessDeclaredMembers";
+  permission java.lang.RuntimePermission "setFactory";
+  permission java.lang.reflect.ReflectPermission "suppressAccessChecks";
+  permission java.net.SocketPermission "*", "accept,connect,resolve";
+};

@@ -1,92 +1,111 @@
-# acecard-metrics-elasticsearch-plugin
+# ACECARD Security Pack
 
+The ACECARD security app provides:
+* Provisions X-Pack users with roles based on their current CASPORT profile.
+* Audit logging of search queries and realm/role queries
+* Camkey management
 
-
-## Getting started
-
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
-
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
-
-## Add your files
-
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
-
+## Clone
 ```
-cd existing_repo
-git remote add origin https://gitlab.spectric.com/acecard/elasticsearch/acecard-metrics-elasticsearch-plugin.git
-git branch -M main
-git push -uf origin main
+$ git@git.vast-inc.com:acecard/acecard-security-elasticsearch-plugin.git
 ```
 
-## Integrate with your tools
+## Building locally
+```
+$ cd acecard-security-elasticsearch-plugin
+$ gradle zip
+```
 
-- [ ] [Set up project integrations](https://gitlab.spectric.com/acecard/elasticsearch/acecard-metrics-elasticsearch-plugin/-/settings/integrations)
+## Installing
+```
+$ cd build/distributions
+$ /usr/share/elasticsearch/bin/elasticsearch-plugin install --batch file://$PWD/acecard-security-7.6.0.zip
+```
 
-## Collaborate with your team
+## Configuration
+By default the ACECARD security plugin is disabled. It must be explicily enabled by setting `acecard.security.enabled=true` in the configuration.
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Automatically merge when pipeline succeeds](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
+| Setting                                                                | Default                                        | Description
+|------------------------------------------------------------------------|------------------------------------------------|------------
+| acecard.security.enabled                                               | false                                          | enables the plugin
+| acecard.security.casport.url **(DYNAMIC)**                             | https://localhost/acecard-casport/lookupUser   | Url to hit to look up casport profile
+| acecard.security.casport.timeout_in_seconds                            | 30                                             | Timeout for casport comms
+| acecard.security.ssl_host_validation_enabled                           | true                                           | 
+| acecard.security.truststore_path                                       |                                                | path to the truststore
+| acecard.security.truststore_password                                   |                                                | truststore password
+| acecard.security.truststore_type                                       |                                                | trustore type (ex. jks, pkcs12)
+| acecard.security.keystore_path                                         |                                                | path to the keystore
+| acecard.security.keystore_password                                     |                                                | keystore password
+| acecard.security.keystore_type                                         |                                                | keystore type (ex. jks, pkcs12)     
+| acecard.security.xproxy_chain_header **(DYNAMIC)**                     | X-ProxiedEntitiesChain                         |
+| acecard.security.xproxy_chain_role_prefix **(DYNAMIC)**                | acecard-chained-                               |
+| acecard.security.xproxy_accept_header **(DYNAMIC)**                    | X-ProxiedEntitiesAccepted                      | Response header for success auth
+| acecard.security.xproxy_reject_header **(DYNAMIC)**                    | X-ProxiedEntitiesRejected                      | Response header for failed auth
+| acecard.security.xproxy_details_header **(DYNAMIC)**                   | X-ProxiedEntitiesDetails                       | Response header with failed auth details
+| acecard.security.xproxy_response.enabled **(DYNAMIC)**                  | false                                          | If enabled, xproxy headers will be included in Search responses
+| acecard.security.dn_header **(DYNAMIC)**                               | casport-dn                                     |
+| acecard.security.roles **(DYNAMIC)**                                   | kibana-user                                    |
+| acecard.security.indexes **(DYNAMIC)**                                 | *                                              |
+| acecard.security.role_namespace **(DYNAMIC)**                          | acecard-casport                                |
+| acecard.security.camkeys **(DYNAMIC)**                                 | []                                             | Expected possible camkey values returned from casport
+| acecard.security.auto_refresh_users_enabled                            | false                                          | If enabled, refresh the realm/role caches if configured camkeys or groups have changed.
+| acecard.security.groups **(DYNAMIC)**                                  | []                                             | Expected possible group values returned from casport
+| acecard.security.projects **(DYNAMIC)**                                |                                                |
+| acecard.security.privileges **(DYNAMIC)**                              | read, view_index_metadata, read_cross_cluster  |
+| acecard.security.cluster_privileges **(DYNAMIC)**                      | transport_client                               |
+| acecard.security.role_cache_hours                                      | 24                                             |
+| acecard.security.role_refresh_cache_hours **(DYNAMIC)**                | 1                                              |
+| acecard.security.role_refresh_cache_enabled **(DYNAMIC)**              | true                                           |
+| acecard.security.filter_camkeys_enabled **(DYNAMIC)**                  | true                                           | Controls if security will filter the camkeys returned from casport.
+| acecard.security.filter_groups_enabled **(DYNAMIC)**                   | true                                           | Controls if security will filter the groups returned from casport.
+| acecard.security.audit.enabled **(DYNAMIC)**                           | false                                          | Controls if audit logging is enabled
+| acecard.security.audit.search.headers_logged_list **(DYNAMIC)**        |                                                | The headers that need to exist on an request for it to be logged
+| acecard.security.audit.search.headers_required_list **(DYNAMIC)**      |                                                | If any headers are defined, all requests without them will be rejected
+| acecard.security.audit.search.missing_user_ignored **(DYNAMIC)**       | true                                           |
+| acecard.security.audit.search.system_indices_ignored **(DYNAMIC)**     | true                                           |
+| acecard.security.audit.search.user_field **(DYNAMIC)**                 | casport-dn                                     |
+| acecard.security.audit.search.action_events **(DYNAMIC)**              | []                                             | List of events to either ignore or include
+| acecard.security.audit.search.ignore_action_events **(DYNAMIC)**       | false                                          | If false, will only audit actions in action_events. If true, will ignore action events in action_events.
+| acecard.security.audit.search.ignore_users.field                       | casport-dn                                     | Header field to use for ignoring user audits
+| acecard.security.audit.search.ignore_users.list                        | []                                             | Users in this list will not have their searches audited
+| acecard.security.audit.write.indices **(DYNAMIC)**                     | []                                             | Indices for which writes will be audited. Values can be regex or concrete indices.
+| acecard.security.audit.template_file                                   | /acecard-audit-template.json                   | JSON file that defines the audit index template
+| acecard.security.audit.ilm_file                                        | /acecard-audit-ilm.json                        | JSON file defines the audit ILM policy
+| acecard.security.audit.template_version                                | 3                                              | Template version
+| acecard.security.audit.template_use_defaults                           | true                                           | If true, use the default audit template/
+| acecard.security.native_roles.cache.timeout.minutes                    | 5                                              | Timeout value for the native roles cache
+| acecard.security.native_roles.lookup.retry.count **(DYNAMIC)**         | 3                                              | Number of retries for querying all users to populate the native roles cache. 
+| acecard.security.native_roles.lookup.retry.sleep.seconds **(DYNAMIC)** | 2                                              | Time in between user lookup retries
+| acecard.security.dev_indices.enabled **(DYNAMIC)**                     | false                                          | Enable access to test indices per user
+| acecard.security.dev_indices.prefix                                    | dev-index                                      | Prefix for the user's test indices
+| acecard.security.dev_indices.template_file                             | /acecard-dev-indices-template.json             | JSON file that defines the audit index template
+| acecard.security.dev_indices.ilm_file                                  | /acecard-dev-indices-ilm.json                  | JSON file defines the audit ILM policy
+| acecard.security.dev_indices.template_version                          | 2                                              | Template version
+| acecard.security.dev_indices.template_use_defaults                     | true                                           | If true, use the default audit template/
+| acecard.security.whitelist.enabled **(DYNAMIC)**                       | false                                          | If enabled, check that chained request host is in the configured whitelist
+| acecard.security.whitelist **(DYNAMIC)**                               | []                                             | Hosts that are allowed to proxy a request
+| acecard.security.map_groups_to_roles.enabled **(DYNAMIC)**             | false                                          | If true, add casport groups to the list of elasticsearch roles
+| acecard.security.map_groups_to_roles.mapping **(DYNAMIC)**             | []                                             | Casport groups mapped to native roles. Ex (group:roles,...): ["group1:acecard_default,reporting", "group2:read_only"]
 
-## Test and Deploy
+## Build and push to repository
+It is recommended you use Jenkins for pushing built plugins to the repo. 
 
-Use the built-in continuous integration in GitLab.
+* https://jenkins.vast-inc.com/view/acecard/job/acecard-elasticsearch-plugins-publish/
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing(SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+> build.sh is used to build and push this plugin to the acecard repo. When you use build.sh the plugin is built using a gradle docker image. The jdk
+> version of the docker image is set in build.sh (jdk_version). A source zip will also be pushed.
+```
+$ ./build.sh -g
+```
 
-***
+## Rest Interfaces
 
-# Editing this README
+This plugin provides multiple rest interfaces for interacting with the acecard realm.
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thank you to [makeareadme.com](https://www.makeareadme.com/) for this template.
+#### /_acecard/security/_clear_cache
 
-## Suggestions for a good README
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+Clear all cached acecard/native roles from the acecard realm.
+                     
+#### /_acecard/security/_clear_cache/{usernames}
 
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+Clear the provided user's cached acecard/native roles from the acecard realm.

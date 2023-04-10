@@ -1,0 +1,41 @@
+image: gradle:7-jdk17
+stages:
+  - build
+  - changelog
+  - deploy
+
+build-code-job:
+  stage: build
+  script:
+    - gradle --no-daemon build
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+
+changelog-job:
+  stage: changelog
+  script:
+    - git fetch origin $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
+    - files=$(git diff-tree --no-commit-id --name-only -r $CI_MERGE_REQUEST_TARGET_BRANCH_SHA -r $CI_COMMIT_SHA)
+    - if printf '%s\0' "${files[@]}" | grep -F -x -z 'CHANGELOG.md'; then
+    - echo "Found CHANGELOG.md"
+    - else
+    - echo "An Updated CHANGELOG.md must be provided for merge requests."
+    - exit 1
+    - fi
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+
+deploy-job:
+  stage: deploy
+  before_script:
+    - export PLUGIN_VERSION=$(grep -o 'plugin_version[^"]*' gradle.properties | cut -d "=" -f 2)
+    - export ES_VERSION=$(grep -o 'elastic_version[^"]*' gradle.properties | cut -d "=" -f 2)
+    - export PLUGIN_NAME=acecard-security-elasticsearch-plugin-$PLUGIN_VERSION-src.zip
+  script:
+    - gradle --no-daemon zip
+    - git archive --prefix=acecard-security-elasticsearch-plugin/ -o $PLUGIN_NAME HEAD
+    - mv $PLUGIN_NAME build/distributions/
+    - find build/distributions/ -type f -exec curl --fail -u acecard:acecard -T {} $ES_PLUGIN_REPO/$ES_VERSION/ \;
+  rules:
+    - if: $CI_COMMIT_TAG
+
