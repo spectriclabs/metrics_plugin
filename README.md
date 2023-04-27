@@ -25,17 +25,6 @@ By default the ACECARD Metrics plugin is enabled.
 | how often to write the metrics for display (in seconds)
 
 
-## Build and push to repository
-It is recommended you use Jenkins for pushing built plugins to the repo. 
-
-* https://jenkins.vast-inc.com/view/acecard/job/acecard-elasticsearch-plugins-publish/
-
-> build.sh is used to build and push this plugin to the acecard repo. When you use build.sh the plugin is built using a gradle docker image. The jdk
-> version of the docker image is set in build.sh (jdk_version). A source zip will also be pushed.
-```
-$ ./build.sh -g
-```
-
 ## Rest Interfaces
 
 This plugin provides a rest interface for retrieving the acecard metrics.
