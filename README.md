@@ -20,10 +20,11 @@ By default the ACECARD Metrics plugin is enabled.
 
 | Setting                                                                | Default                                        | Description
 |------------------------------------------------------------------------|------------------------------------------------|------------
-| acecard.metrics.enabled                                                | true                                          | enables the plugin
-| acecard.metrics.output_seconds                                         | 10
+| acecard.metrics.enabled                                                | false                                          | enables the plugin
+| acecard.metrics.output_seconds (DYNAMIC)                               | 10
 | how often to write the metrics for display (in seconds)
-
+| acecard.metrics.indices (DYNAMIC)                                		 | []
+| list of what indices should have metric listeners added to it
 
 ## Rest Interfaces
 

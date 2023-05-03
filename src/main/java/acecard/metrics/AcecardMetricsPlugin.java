@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
@@ -18,7 +19,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.lucene.index.IndexableField;
 import org.elasticsearch.client.internal.Client;
-import org.elasticsearch.client.internal.node.NodeClient;
+import org.elasticsearch.cluster.ClusterChangedEvent;
+import org.elasticsearch.cluster.ClusterStateListener;
 import org.elasticsearch.cluster.metadata.IndexNameExpressionResolver;
 import org.elasticsearch.cluster.node.DiscoveryNodes;
 import org.elasticsearch.cluster.routing.allocation.decider.AllocationDeciders;
@@ -54,6 +56,7 @@ public class AcecardMetricsPlugin extends Plugin implements ActionPlugin {
 	private static final Logger log = LogManager.getLogger(AcecardMetricsPlugin.class);
 
 	private ClusterSettings clusterSettings = null;
+	private AtomicBoolean isMasterNode = new AtomicBoolean(false);
 
 	@Inject
 	public AcecardMetricsPlugin(Settings settings) {
@@ -62,8 +65,8 @@ public class AcecardMetricsPlugin extends Plugin implements ActionPlugin {
 	@Override
 	public List<Setting<?>> getSettings() {
 		List<Setting<?>> list = new ArrayList<>();
-		list.addAll(Arrays.asList(AcecardMetricsSettings.METRICS_ENABLED));
-		list.addAll(Arrays.asList(AcecardMetricsSettings.METRICS_OUTPUT_SECONDS));
+		list.addAll(Arrays.asList(AcecardMetricsSettings.METRICS_ENABLED, AcecardMetricsSettings.METRICS_OUTPUT_SECONDS,
+				AcecardMetricsSettings.INDICIES_LIST));
 
 		return list;
 	}
@@ -91,23 +94,20 @@ public class AcecardMetricsPlugin extends Plugin implements ActionPlugin {
 		clusterSettings = clusterService.getClusterSettings();
 		final List<Object> components = new ArrayList<>();
 
-		if (client instanceof NodeClient) {
-
-		} else {
-			log.warn("Not enabled for non node clients");
-		}
+		clusterService.addListener(new ClusterListener(this));
 		return components;
 	}
 
 	@Override
 	public void onIndexModule(IndexModule indexModule) {
 		if (clusterSettings.get(AcecardMetricsSettings.METRICS_ENABLED)) {
-			// TODO from here add in additional checks to ensure that we only add listeners
-			// to the indexes that we want
-//indexModule.indexSettings().getIndexMetadata().getAliases()
+			List<String> indicies = clusterSettings.get(AcecardMetricsSettings.INDICIES_LIST);
 			String indexName = indexModule.getIndex().getName();
-			log.info("Creating Index Listener for Index:{}", indexName);
-			indexModule.addIndexOperationListener(new IndexListener(indexName));
+
+			if (indicies.contains(indexName)) {
+				log.info("Creating Index Listener for Index:{}", indexName);
+				indexModule.addIndexOperationListener(new IndexListener(indexName, this));
+			}
 		}
 	}
 
@@ -166,27 +166,49 @@ public class AcecardMetricsPlugin extends Plugin implements ActionPlugin {
 	// Listener Class for updating the documents
 	private class IndexListener implements IndexingOperationListener {
 		private String indexName;
+		private AcecardMetricsPlugin plugin;
 
-		private IndexListener(String indexName) {
+		private IndexListener(String indexName, AcecardMetricsPlugin plugin) {
 			this.indexName = indexName;
+			this.plugin = plugin;
 		}
 
 		@Override
 		public Engine.Index preIndex(ShardId shardId, Engine.Index index) {
-			String processorId;
-			String signalId;
-			
-			List<LuceneDocument> docs = index.docs();
-			for (LuceneDocument d : docs) {
-				IndexableField processor = d.getField("processor");
-				IndexableField signal = d.getField("signal_id");
+			if (plugin.isMasterNode.get()) {
+				String processorId;
+				String signalId;
 
-				processorId = processor == null ? "" : processor.stringValue();
-				signalId = signal == null ? "" : signal.stringValue();
-				
-				incrementMetric(indexName, processorId, signalId);
+				List<LuceneDocument> docs = index.docs();
+				for (LuceneDocument d : docs) {
+					IndexableField processor = d.getField("processor");
+					IndexableField signal = d.getField("signal_id");
+
+					processorId = processor == null ? "" : processor.stringValue();
+					signalId = signal == null ? "" : signal.stringValue();
+
+					incrementMetric(indexName, processorId, signalId);
+				}
 			}
 			return index;
+		}
+
+	}
+
+	private class ClusterListener implements ClusterStateListener {
+		private AcecardMetricsPlugin plugin;
+
+		private ClusterListener(AcecardMetricsPlugin plugin) {			
+			this.plugin = plugin;		
+		}
+
+		@Override
+		public void clusterChanged(ClusterChangedEvent event) {
+			plugin.isMasterNode.set(event.localNodeMaster());
+			
+			if (!plugin.isMasterNode.get()) {
+				plugin.resetMetrics();
+			}
 		}
 
 	}
