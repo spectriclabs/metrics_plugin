@@ -34,7 +34,7 @@ public class AcecardMetricsIndexInfoDisplay extends AbstractCatAction {
 
 		// set the seconds based off of the setting value
 		int outputSeconds = this.plugin.getClusterSettings().get(AcecardMetricsSettings.METRICS_OUTPUT_SECONDS);
-
+		
 		// create timer to build metrics on a per x second basis
 		LocalDateTime timerStartTime = LocalDateTime.now();
 		int seconds = timerStartTime.getSecond();
@@ -64,8 +64,8 @@ public class AcecardMetricsIndexInfoDisplay extends AbstractCatAction {
 			response.append("# TYPE ELASTICSEARCH_DOCUMENT_COUNT gauge\n");
 		}
 
-		return channel -> {
-			channel.sendResponse(new RestResponse(RestStatus.OK, metricResponse));
+				return channel -> {
+					channel.sendResponse(new RestResponse(RestStatus.OK, metricResponse));
 		};
 	}
 
@@ -103,7 +103,7 @@ public class AcecardMetricsIndexInfoDisplay extends AbstractCatAction {
 		@Override
 		public void run() {
 			synchronized (response) {
-				response.append(plugin.getMetrics()).append('\n');
+				response.append(plugin.getMetrics());
 			}
 		}
 

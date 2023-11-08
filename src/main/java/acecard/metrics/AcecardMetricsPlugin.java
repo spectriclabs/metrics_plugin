@@ -56,7 +56,7 @@ public class AcecardMetricsPlugin extends Plugin implements ActionPlugin {
 	private static final Logger log = LogManager.getLogger(AcecardMetricsPlugin.class);
 
 	private ClusterSettings clusterSettings = null;
-	private AtomicBoolean isMasterNode = new AtomicBoolean(false);
+	private AtomicBoolean isMasterNode = new AtomicBoolean(true);
 
 	@Inject
 	public AcecardMetricsPlugin(Settings settings) {
@@ -102,13 +102,37 @@ public class AcecardMetricsPlugin extends Plugin implements ActionPlugin {
 	public void onIndexModule(IndexModule indexModule) {
 		if (clusterSettings.get(AcecardMetricsSettings.METRICS_ENABLED)) {
 			List<String> indicies = clusterSettings.get(AcecardMetricsSettings.INDICIES_LIST);
+			log.info("Acecard Metrics Index List: {}", Arrays.toString(indicies.toArray()));
+			
 			String indexName = indexModule.getIndex().getName();
 
-			if (indicies.contains(indexName)) {
+ 			if (checkIndicies(indexName, indicies)) {
 				log.info("Creating Index Listener for Index:{}", indexName);
 				indexModule.addIndexOperationListener(new IndexListener(indexName, this));
 			}
 		}
+	}
+
+	private boolean checkIndicies(String indexName, List<String> indicies) {
+		//If the indicies list is empty then accept everything
+		if (indicies == null || indicies.isEmpty()) {
+			log.info("Indicies is empty so match everything  - index: {}", indexName);
+			return true;
+		}
+	
+		boolean match = false;
+		for (String index: indicies) {
+			if (indexName.startsWith(index)) {
+				log.info("Found match for index {} against indicies entry: {}", indexName, index);
+				match = true;
+				break;
+			}
+		}
+	
+		if (!match) {
+			log.info("No match for index {}", indexName);
+		}
+		return match;
 	}
 
 	@Override
@@ -129,6 +153,10 @@ public class AcecardMetricsPlugin extends Plugin implements ActionPlugin {
 		synchronized (metrics) {
 			AtomicInteger count = metrics.getOrDefault(key, new AtomicInteger(0));
 			count.getAndIncrement();
+
+			if (count.get() == 1) {
+				log.info("{} {}", key, count);
+			}
 
 			metrics.put(key, count);
 		}
@@ -204,11 +232,13 @@ public class AcecardMetricsPlugin extends Plugin implements ActionPlugin {
 
 		@Override
 		public void clusterChanged(ClusterChangedEvent event) {
-			plugin.isMasterNode.set(event.localNodeMaster());
-			
-			if (!plugin.isMasterNode.get()) {
-				plugin.resetMetrics();
-			}
+			log.info("Received a cluster change event");
+			log.info("local id: {} master id: {} isMaster: {}", event.state().nodes().getLocalNodeId(),event.state().nodes().getMasterNodeId(), event.localNodeMaster());
+			// plugin.isMasterNode.set(event.localNodeMaster());
+			//
+			// if (!plugin.isMasterNode.get()) {
+			// 	plugin.resetMetrics();
+			// }
 		}
 
 	}
