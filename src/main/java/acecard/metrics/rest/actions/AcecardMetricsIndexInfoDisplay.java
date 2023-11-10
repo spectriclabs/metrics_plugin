@@ -5,6 +5,7 @@ package acecard.metrics.rest.actions;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -28,6 +29,7 @@ public class AcecardMetricsIndexInfoDisplay extends AbstractCatAction {
 	private Timer timer;
 
 	private StringBuilder response;
+	private ZonedDateTime metricsLastRequested = ZonedDateTime.now();
 
 	public AcecardMetricsIndexInfoDisplay(AcecardMetricsPlugin acecardMetricsPlugin) {
 		this.plugin = acecardMetricsPlugin;
@@ -54,14 +56,22 @@ public class AcecardMetricsIndexInfoDisplay extends AbstractCatAction {
 		this.timer.cancel();
 	}
 
+	private void resetResponse() {
+		synchronized (response) {
+			response.setLength(0);
+			response.append("# HELP ELASTICSEARCH_DOCUMENT_COUNT number of documents injected into elasticsearch broken down by index, processor, signal_id\n");
+			response.append("# TYPE ELASTICSEARCH_DOCUMENT_COUNT gauge\n");
+		}
+	}
+
 	@Override
 	protected RestChannelConsumer doCatRequest(RestRequest restRequest, NodeClient nodeClient) {
 		String metricResponse;
 		synchronized (response) {
+			metricsLastRequested = ZonedDateTime.now();
 			metricResponse = response.toString();
-			response.setLength(0);
-			response.append("# HELP ELASTICSEARCH_DOCUMENT_COUNT number of documents injected into elasticsearch broken down by index, processor, signal_id\n");
-			response.append("# TYPE ELASTICSEARCH_DOCUMENT_COUNT gauge\n");
+			
+			resetResponse();
 		}
 
 				return channel -> {
@@ -103,6 +113,13 @@ public class AcecardMetricsIndexInfoDisplay extends AbstractCatAction {
 		@Override
 		public void run() {
 			synchronized (response) {
+				ZonedDateTime currentTime = ZonedDateTime.now();
+
+				// if no requests in the last hour reset the response
+				if (metricsLastRequested.isBefore(currentTime.minusHours(1))) {
+					resetResponse();
+				}
+
 				response.append(plugin.getMetrics());
 			}
 		}

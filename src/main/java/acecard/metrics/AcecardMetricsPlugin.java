@@ -203,7 +203,8 @@ public class AcecardMetricsPlugin extends Plugin implements ActionPlugin {
 
 		@Override
 		public Engine.Index preIndex(ShardId shardId, Engine.Index index) {
-			if (plugin.isMasterNode.get()) {
+			log.info("Received preIndex on Index: {}", indexName);
+//			if (plugin.isMasterNode.get()) {
 				String processorId;
 				String signalId;
 
@@ -217,7 +218,7 @@ public class AcecardMetricsPlugin extends Plugin implements ActionPlugin {
 
 					incrementMetric(indexName, processorId, signalId);
 				}
-			}
+//			}
 			return index;
 		}
 
