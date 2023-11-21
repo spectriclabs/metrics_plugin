@@ -30,10 +30,12 @@ public class AcecardMetricsIndexInfoDisplay extends AbstractCatAction {
 
 	private StringBuilder response;
 	private ZonedDateTime metricsLastRequested = ZonedDateTime.now();
+	private int retain_hours = 10;
 
 	public AcecardMetricsIndexInfoDisplay(AcecardMetricsPlugin acecardMetricsPlugin) {
 		this.plugin = acecardMetricsPlugin;
 
+		this.retain_hours = this.plugin.getClusterSettings().get(AcecardMetricsSettings.METRICS_RETAIN_HOURS);
 		// set the seconds based off of the setting value
 		int outputSeconds = this.plugin.getClusterSettings().get(AcecardMetricsSettings.METRICS_OUTPUT_SECONDS);
 		
@@ -116,7 +118,7 @@ public class AcecardMetricsIndexInfoDisplay extends AbstractCatAction {
 				ZonedDateTime currentTime = ZonedDateTime.now();
 
 				// if no requests in the last hour reset the response
-				if (metricsLastRequested.isBefore(currentTime.minusHours(1))) {
+				if (metricsLastRequested.isBefore(currentTime.minusHours(retain_hours))) {
 					resetResponse();
 				}
 

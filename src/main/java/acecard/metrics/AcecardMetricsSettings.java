@@ -20,6 +20,8 @@ public final class AcecardMetricsSettings {
     // Dynamic Settings
     public static final Setting<Integer> METRICS_OUTPUT_SECONDS = Setting.intSetting(SETTINGS_NAMESPACE + ".output_seconds",
             10, Property.NodeScope, Property.Dynamic);
+    public static final Setting<Integer> METRICS_RETAIN_HOURS = Setting.intSetting(SETTINGS_NAMESPACE + ".retain_hours",
+            10, Property.NodeScope, Property.Dynamic);
     public static final Setting<List<String>> INDICIES_LIST = Setting.listSetting(SETTINGS_NAMESPACE + ".indices",            
-    		Arrays.asList(), Function.identity(), Property.NodeScope, Property.Dynamic);
+    		Arrays.asList("signal"), Function.identity(), Property.NodeScope, Property.Dynamic);
 }
