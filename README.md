@@ -22,6 +22,7 @@ By default the ACECARD Metrics plugin is enabled.
 |------------------------------------------------------------------------|------------------------------------------------|------------
 | acecard.metrics.enabled                                                | false | enables the plugin
 | acecard.metrics.output_seconds (DYNAMIC)                               | 10 | how often to write the metrics for display (in seconds)
+| acecard.metrics.retain_hours (DYNAMIC)                               | 10 | how long to hold the metrics for display (in hours)
 | acecard.metrics.indices (DYNAMIC)                                		 | [] | list of what indices should have metric listeners added to it
 
 ## Rest Interfaces

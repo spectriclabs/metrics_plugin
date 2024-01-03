@@ -5,6 +5,7 @@ package acecard.metrics.rest.actions;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -28,13 +29,16 @@ public class AcecardMetricsIndexInfoDisplay extends AbstractCatAction {
 	private Timer timer;
 
 	private StringBuilder response;
+	private ZonedDateTime metricsLastRequested = ZonedDateTime.now();
+	private int retain_hours = 10;
 
 	public AcecardMetricsIndexInfoDisplay(AcecardMetricsPlugin acecardMetricsPlugin) {
 		this.plugin = acecardMetricsPlugin;
 
+		this.retain_hours = this.plugin.getClusterSettings().get(AcecardMetricsSettings.METRICS_RETAIN_HOURS);
 		// set the seconds based off of the setting value
 		int outputSeconds = this.plugin.getClusterSettings().get(AcecardMetricsSettings.METRICS_OUTPUT_SECONDS);
-
+		
 		// create timer to build metrics on a per x second basis
 		LocalDateTime timerStartTime = LocalDateTime.now();
 		int seconds = timerStartTime.getSecond();
@@ -54,18 +58,26 @@ public class AcecardMetricsIndexInfoDisplay extends AbstractCatAction {
 		this.timer.cancel();
 	}
 
-	@Override
-	protected RestChannelConsumer doCatRequest(RestRequest restRequest, NodeClient nodeClient) {
-		String metricResponse;
+	private void resetResponse() {
 		synchronized (response) {
-			metricResponse = response.toString();
 			response.setLength(0);
 			response.append("# HELP ELASTICSEARCH_DOCUMENT_COUNT number of documents injected into elasticsearch broken down by index, processor, signal_id\n");
 			response.append("# TYPE ELASTICSEARCH_DOCUMENT_COUNT gauge\n");
 		}
+	}
 
-		return channel -> {
-			channel.sendResponse(new RestResponse(RestStatus.OK, metricResponse));
+	@Override
+	protected RestChannelConsumer doCatRequest(RestRequest restRequest, NodeClient nodeClient) {
+		String metricResponse;
+		synchronized (response) {
+			metricsLastRequested = ZonedDateTime.now();
+			metricResponse = response.toString();
+			
+			resetResponse();
+		}
+
+				return channel -> {
+					channel.sendResponse(new RestResponse(RestStatus.OK, metricResponse));
 		};
 	}
 
@@ -103,7 +115,14 @@ public class AcecardMetricsIndexInfoDisplay extends AbstractCatAction {
 		@Override
 		public void run() {
 			synchronized (response) {
-				response.append(plugin.getMetrics()).append('\n');
+				ZonedDateTime currentTime = ZonedDateTime.now();
+
+				// if no requests in the last hour reset the response
+				if (metricsLastRequested.isBefore(currentTime.minusHours(retain_hours))) {
+					resetResponse();
+				}
+
+				response.append(plugin.getMetrics());
 			}
 		}
 
