@@ -205,7 +205,7 @@ public class AcecardMetricsPlugin extends Plugin implements ActionPlugin {
 				for (String field: fields) {
 					String value = "UNDEFINED";
 
-					IndexableField indexField = d.getField("processor");
+					IndexableField indexField = d.getField(field);
 					if (indexField != null) {
 						if (indexField.stringValue() != null) {
 							value = indexField.stringValue();
