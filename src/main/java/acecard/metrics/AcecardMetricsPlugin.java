@@ -8,6 +8,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
@@ -62,7 +63,7 @@ public class AcecardMetricsPlugin extends Plugin implements ActionPlugin {
 	public List<Setting<?>> getSettings() {
 		List<Setting<?>> list = new ArrayList<>();
 		list.addAll(Arrays.asList(AcecardMetricsSettings.METRICS_ENABLED, AcecardMetricsSettings.METRICS_OUTPUT_SECONDS, AcecardMetricsSettings.METRICS_RETAIN_HOURS,
-				AcecardMetricsSettings.INDICIES_LIST));
+				AcecardMetricsSettings.INDICIES_LIST, AcecardMetricsSettings.FIELDS_LIST));
 
 		return list;
 	}
@@ -130,11 +131,21 @@ public class AcecardMetricsPlugin extends Plugin implements ActionPlugin {
 
 	Map<String, AtomicInteger> metrics = new ConcurrentHashMap<String, AtomicInteger>();
 
-	private void incrementMetric(String index, String processor, String signal) {
+	private void incrementMetric(String index, Map<String, String> fields) {
 		StringBuilder builder = new StringBuilder();
-		builder.append("ELASTICSEARCH_DOCUMENT_COUNT ").append('{').append("index=\"").append(index).append("\", ")
-				.append("processor=\"").append(processor).append("\", ").append("signal_id=\"").append(signal)
-				.append('\"').append('}');
+		builder.append("ELASTICSEARCH_DOCUMENT_COUNT ").append('{').append("index=\"").append(index).append("\", ");
+
+		for (Entry<String, String> entry : fields.entrySet()){
+			builder.append(entry.getKey()).append("=\"").append(entry.getValue()).append("\", ");
+		}
+
+		// remove the last , from the builder
+		int last_comma = builder.lastIndexOf(",");
+		if (last_comma >= 0) {
+			builder.deleteCharAt(last_comma);			
+		}
+
+		builder.append('}');
 
 		String key = builder.toString();
 
@@ -185,31 +196,28 @@ public class AcecardMetricsPlugin extends Plugin implements ActionPlugin {
 		@Override
 		public Engine.Index preIndex(ShardId shardId, Engine.Index index) {
 
+			List<String> fields = clusterSettings.get(AcecardMetricsSettings.FIELDS_LIST);
+
 			List<LuceneDocument> docs = index.docs();
 			for (LuceneDocument d : docs) {
-				String processorId = "UNDEFINED";
-				String signalId = "UNDEFINED";
 
-				IndexableField processor = d.getField("processor");
-				IndexableField signal = d.getField("signal_id");
+				Map<String, String> metrics = new HashMap<String,String>();
+				for (String field: fields) {
+					String value = "UNDEFINED";
 
-				if (processor != null) {
-					if (processor.stringValue() != null) {
-						processorId = processor.stringValue();
-					} else if (processor.binaryValue() != null) {
-						processorId = processor.binaryValue().utf8ToString();
+					IndexableField indexField = d.getField("processor");
+					if (indexField != null) {
+						if (indexField.stringValue() != null) {
+							value = indexField.stringValue();
+						} else if (indexField.binaryValue() != null) {
+							value = indexField.binaryValue().utf8ToString();
+						}
 					}
+
+					metrics.put(field, value);
 				}
 
-				if (signal != null) {
-					if (signal.stringValue() != null) {
-						signalId = signal.stringValue();
-					} else if (signal.binaryValue() != null) {
-						signalId = signal.binaryValue().utf8ToString();
-					}
-				}
-
-				incrementMetric(indexName, processorId, signalId);
+				incrementMetric(indexName, metrics);
 			}
 
 			return index;

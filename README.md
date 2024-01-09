@@ -16,15 +16,15 @@ $ /usr/share/elasticsearch/bin/elasticsearch-plugin install --batch file://$PWD/
 ```
 
 ## Configuration
-By default the ACECARD Metrics plugin is enabled.
+By default the ACECARD Metrics plugin is disabled.
 
 | Setting                                                                | Default                                        | Description
 |------------------------------------------------------------------------|------------------------------------------------|------------
 | acecard.metrics.enabled                                                | false | enables the plugin
 | acecard.metrics.output_seconds (DYNAMIC)                               | 10 | how often to write the metrics for display (in seconds)
 | acecard.metrics.retain_hours (DYNAMIC)                               | 10 | how long to hold the metrics for display (in hours)
-| acecard.metrics.indices (DYNAMIC)                                		 | [] | list of what indices should have metric listeners added to it
-
+| acecard.metrics.indices (DYNAMIC)                                		 | ["signal"] | list of what indices should have metric listeners added to it, the entries in this list are compared to the start of the index and if there is a match a listener is created
+| acecard.metrics.capturable_fields (DYNAMIC)                                		 | ["processor", "signal_id"] | list of what fields from a document should be captured by the plugin metrics
 ## Rest Interfaces
 
 This plugin provides a rest interface for retrieving the acecard metrics.

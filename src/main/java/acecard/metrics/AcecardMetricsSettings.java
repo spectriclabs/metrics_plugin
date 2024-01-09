@@ -24,4 +24,6 @@ public final class AcecardMetricsSettings {
             10, Property.NodeScope, Property.Dynamic);
     public static final Setting<List<String>> INDICIES_LIST = Setting.listSetting(SETTINGS_NAMESPACE + ".indices",            
     		Arrays.asList("signal"), Function.identity(), Property.NodeScope, Property.Dynamic);
+    public static final Setting<List<String>> FIELDS_LIST = Setting.listSetting(SETTINGS_NAMESPACE + ".capturable_fields",            
+    		Arrays.asList("processor", "signal_id"), Function.identity(), Property.NodeScope, Property.Dynamic);
 }
